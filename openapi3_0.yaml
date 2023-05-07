@@ -1,0 +1,307 @@
+openapi: 3.0.0
+info:
+  title: Django-сервис друзей
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+
+paths:
+  /users:
+    get:
+      summary: Получить список всех пользователей
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+    post:
+      summary: Зарегистрировать нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Неверный ввод
+
+  /users/{user_id}:
+    get:
+      summary: Получить пользователя по ID
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: Пользователь не найден
+
+  /users/{user_id}/friends:
+    get:
+      summary: Получить список друзей пользователя
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '404':
+          description: Пользователь не найден
+
+  /users/{user_id}/friends/in:
+    get:
+      summary: Получить список приглашений для этого пользователя от других пользователей
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FriendshipRequest'
+        '404':
+          description: Пользователь не найден
+
+  /users/{user_id}/friends/out:
+    get:
+      summary: Получить список приглашений от этого пользователя другим пользователям
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FriendshipRequest'
+        '404':
+          description: Пользователь не найден
+
+
+  /users/{user_id}/friends/{friend_id}:
+    get:
+      summary: Получить статус дружбы пользователя с каким-то другим пользователем
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+        - name: friend_id
+          in: path
+          required: true
+          description: ID другого пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - 'уже друзья'
+                      - 'есть исходящая заявка'
+                      - 'есть входящая заявка'
+                      - 'ничего нет'
+        '404':
+          description: Пользователь не найден
+        '400':
+          description: Неверный ввод
+
+    post:
+      summary: Послать заявку в друзья
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+        - name: friend_id
+          in: path
+          required: true
+          description: ID другого пользователя
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/FriendshipRequest'
+                  - $ref: '#/components/schemas/Friendship'
+
+        '404':
+          description: Пользователь не найден
+        '400':
+          description: Неверный ввод
+        '423':
+          description: Запрещено при текущем статусе
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - 'уже друзья'
+                      - 'уже есть исходящая заявка'
+
+    delete:
+      summary: Удалить пользователя из друзей и/или удалить заявку в друзья
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+        - name: friend_id
+          in: path
+          required: true
+          description: ID другого пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Пользователь не найден
+        '400':
+          description: Неверный ввод
+
+
+  /users/{user_id}/friends/{friend_id}/accept:
+    post:
+      summary: Принять заявку в друзья
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+        - name: friend_id
+          in: path
+          required: true
+          description: ID другого пользователя
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Friendship'
+        '404':
+          description: Пользователь или заявка не найдены
+
+  /users/{user_id}/friends/{friend_id}/reject:
+    post:
+      summary: Отклонить заявку в друзья
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID текущего пользователя
+          schema:
+            type: integer
+        - name: friend_id
+          in: path
+          required: true
+          description: ID другого пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Пользователь или заявка не найдены
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+    FriendshipRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        from:
+          $ref: '#/components/schemas/User'
+        to:
+          $ref: '#/components/schemas/User'
+    Friendship:
+      type: object
+      properties:
+        id:
+          type: integer
+        user1:
+          $ref: '#/components/schemas/User'
+        user2:
+          $ref: '#/components/schemas/User'
